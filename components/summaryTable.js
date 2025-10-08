@@ -2,13 +2,36 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 export default function SummaryTable({ semester1Average, semester2Average }) {
+  // Helper function to check if a value represents actual entered grades
+  const isValidAverage = (value) => {
+    if (!value || value === '-' || value === '0.00' || value === '0') return false;
+    const num = parseFloat(value);
+    return !isNaN(num) && num > 0;
+  };
+
   // Calculate annual average
-  const annualAverage = ((parseFloat(semester1Average) + parseFloat(semester2Average)) / 2).toFixed(2);
+  const calculateAnnualAverage = () => {
+    const s1 = isValidAverage(semester1Average) ? parseFloat(semester1Average) : null;
+    const s2 = isValidAverage(semester2Average) ? parseFloat(semester2Average) : null;
+
+    // Only calculate if both semesters have valid grades
+    if (s1 !== null && s2 !== null) {
+      return ((s1 + s2) / 2).toFixed(2);
+    }
+    
+    // If only one semester has grades, show dash (not the single semester average)
+    // This is more accurate - annual average requires both semesters
+    return '-';
+  };
+
+  const annualAverage = calculateAnnualAverage();
+
+  // Format display values
+  const displayS1 = isValidAverage(semester1Average) ? semester1Average : '-';
+  const displayS2 = isValidAverage(semester2Average) ? semester2Average : '-';
 
   return (
     <View style={styles.container}>
-   
-      
       {/* Table Header */}
       <View style={styles.tableHeader}>
         <View style={styles.headerCell}>
@@ -18,26 +41,27 @@ export default function SummaryTable({ semester1Average, semester2Average }) {
           <Text style={styles.headerText}>Moyenne</Text>
         </View>
       </View>
-
+      
       {/* Table Rows */}
       <View style={styles.tableRow}>
         <View style={styles.cell}>
           <Text style={styles.cellText}>Semestre 1</Text>
         </View>
         <View style={styles.cell}>
-          <Text style={styles.cellText}>{semester1Average}</Text>
+          <Text style={styles.cellText}>{displayS1}</Text>
         </View>
       </View>
-
+      
       <View style={styles.tableRow}>
         <View style={styles.cell}>
           <Text style={styles.cellText}>Semestre 2</Text>
         </View>
         <View style={styles.cell}>
-          <Text style={styles.cellText}>{semester2Average}</Text>
+          <Text style={styles.cellText}>{displayS2}</Text>
         </View>
       </View>
-
+      
+      {/* Annual Average Row */}
       <View style={[styles.tableRow, styles.annualRow]}>
         <View style={styles.cell}>
           <Text style={[styles.cellText, styles.annualText]}>Année</Text>
@@ -61,13 +85,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  header: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 15,
-    color: '#2c3e50',
   },
   tableHeader: {
     flexDirection: 'row',

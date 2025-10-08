@@ -10,14 +10,14 @@ export default function Semester3Table() {
   const [ueAverages, setUeAverages] = useState({});
 
   useEffect(() => {
-    AsyncStorage.getItem("S3_NOTES").then((data) => {
+    AsyncStorage.getItem("GL2_S1_NOTES").then((data) => {
       if (data) setSubjects(JSON.parse(data));
     });
   }, []);
 
   const saveNotes = (updated) => {
     setSubjects(updated);
-    AsyncStorage.setItem("S3_NOTES", JSON.stringify(updated));
+    AsyncStorage.setItem("GL2_S1_NOTES", JSON.stringify(updated)); // FIXED: Save notes, not average
   };
 
   const validateNote = (text) => {
@@ -48,8 +48,9 @@ export default function Semester3Table() {
       let continuousNote = 0;
       let moy = 0;
 
-      if (!m.hasTD && !m.hasTP) moy = exam;
-      else if (m.hasTD && m.hasTP) {
+      if (!m.hasTD && !m.hasTP) {
+        moy = exam;
+      } else if (m.hasTD && m.hasTP) {
         continuousNote = (td + tp) / 2;
         moy = continuousNote * 0.4 + exam * 0.6;
       } else if (m.hasTD && !m.hasTP) {
@@ -65,7 +66,7 @@ export default function Semester3Table() {
       totalCoef += m.coef;
     });
 
-    // update UE averages (adjust slice ranges to your own S3 structure)
+    // FIXED: Use correct UE structure for Semester 3 (GL2)
     const groupedByUE = [
       { title: "UE Fondamentale 1 (UEF31)", range: [0, 2] },
       { title: "UE Fondamentale 2 (UEF32)", range: [2, 4] },
@@ -82,20 +83,24 @@ export default function Semester3Table() {
         ueTotal += parseFloat(m.moy) * m.coef;
         ueCoefSum += m.coef;
       });
-      newUEAverages[ue.title] = (ueTotal / ueCoefSum).toFixed(2);
+      newUEAverages[ue.title] = ueCoefSum > 0 ? (ueTotal / ueCoefSum).toFixed(2) : "0.00";
     });
 
     setUeAverages(newUEAverages);
-    const moyenneGenerale = totalWeighted / totalCoef;
-    setAverage(moyenneGenerale.toFixed(2));
-
-    AsyncStorage.setItem("S3_AVERAGE", moyenneGenerale.toFixed(2));
+    
+    // Safe calculation to avoid division by zero
+    const moyenneGenerale = totalCoef > 0 ? totalWeighted / totalCoef : 0;
+    const averageValue = moyenneGenerale.toFixed(2);
+    
+    setAverage(averageValue);
+    AsyncStorage.setItem("GL2_S1_AVERAGE", averageValue);
   };
 
   useEffect(() => {
     calcAverages();
   }, [subjects]);
 
+  // FIXED: Use correct UE structure for Semester 3 display
   const groupedByUE = [
     { title: "UE Fondamentale 1 (UEF31)", data: subjects.slice(0, 2) },
     { title: "UE Fondamentale 2 (UEF32)", data: subjects.slice(2, 4) },

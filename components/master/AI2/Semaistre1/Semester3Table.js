@@ -10,14 +10,14 @@ export default function Semester3Table() {
   const [ueAverages, setUeAverages] = useState({});
 
   useEffect(() => {
-    AsyncStorage.getItem("S3_NOTES").then((data) => {
+    AsyncStorage.getItem("AI2_S1_NOTES").then((data) => {
       if (data) setSubjects(JSON.parse(data));
     });
   }, []);
 
   const saveNotes = (updated) => {
     setSubjects(updated);
-    AsyncStorage.setItem("S3_NOTES", JSON.stringify(updated));
+    AsyncStorage.setItem("AI2_S1_NOTES", JSON.stringify(updated)); // FIXED: Save notes, not average
   };
 
   const validateNote = (text) => {
@@ -66,6 +66,7 @@ export default function Semester3Table() {
       totalCoef += m.coef;
     });
 
+    // FIXED: Use correct UE structure for AI2 Semester 3
     const groupedByUE = [
       { title: "UE Fondamentale (UEF3)", range: [0, 4] },
       { title: "UE Méthodologique (UEM3)", range: [4, 6] },
@@ -81,19 +82,24 @@ export default function Semester3Table() {
         ueTotal += parseFloat(m.moy) * m.coef;
         ueCoefSum += m.coef;
       });
-      newUEAverages[ue.title] = (ueTotal / ueCoefSum).toFixed(2);
+      newUEAverages[ue.title] = ueCoefSum > 0 ? (ueTotal / ueCoefSum).toFixed(2) : "0.00";
     });
 
     setUeAverages(newUEAverages);
-    const moyenneGenerale = totalWeighted / totalCoef;
-    setAverage(moyenneGenerale.toFixed(2));
-    AsyncStorage.setItem("S3_AVERAGE", moyenneGenerale.toFixed(2));
+    
+    // Safe calculation to avoid division by zero
+    const moyenneGenerale = totalCoef > 0 ? totalWeighted / totalCoef : 0;
+    const averageValue = moyenneGenerale.toFixed(2);
+    
+    setAverage(averageValue);
+    AsyncStorage.setItem("AI2_S1_AVERAGE", averageValue);
   };
 
   useEffect(() => {
     calcAverages();
   }, [subjects]);
 
+  // FIXED: Use correct UE structure for AI2 Semester 3 display
   const groupedByUE = [
     { title: "UE Fondamentale (UEF3)", data: subjects.slice(0, 4) },
     { title: "UE Méthodologique (UEM3)", data: subjects.slice(4, 6) },

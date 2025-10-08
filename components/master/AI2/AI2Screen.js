@@ -13,14 +13,23 @@ export default function AI2Screen() {
 
   useEffect(() => {
     const loadAverages = async () => {
-      const s3 = await AsyncStorage.getItem("S3_AVERAGE");
-      const s4 = await AsyncStorage.getItem("S4_AVERAGE");
+      // Try multiple key combinations for compatibility
+      const s3 = await AsyncStorage.getItem("AI2_S1_AVERAGE") || 
+                 await AsyncStorage.getItem("S3_AVERAGE");
+      const s4 = await AsyncStorage.getItem("AI2_S2_AVERAGE") || 
+                 await AsyncStorage.getItem("S4_AVERAGE");
+      
       setAverages({
         s3: s3 || "0.00",
         s4: s4 || "0.00",
       });
     };
+    
     loadAverages();
+    
+    // Set up interval to refresh averages
+    const interval = setInterval(loadAverages, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

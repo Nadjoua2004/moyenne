@@ -10,14 +10,14 @@ export default function Semester1Table() {
   const [ueAverages, setUeAverages] = useState({});
 
   useEffect(() => {
-    AsyncStorage.getItem("S1_NOTES").then((data) => {
+    AsyncStorage.getItem("AI1_S1_NOTES").then((data) => {
       if (data) setSubjects(JSON.parse(data));
     });
   }, []);
 
   const saveNotes = (updated) => {
     setSubjects(updated);
-    AsyncStorage.setItem("S1_NOTES", JSON.stringify(updated));
+    AsyncStorage.setItem("AI1_S1_NOTES", JSON.stringify(updated));
   };
 
   const validateNote = (text) => {
@@ -37,58 +37,62 @@ export default function Semester1Table() {
   };
 
   const calcAverages = () => {
-    let totalWeighted = 0;
-    let totalCoef = 0;
-    const newUEAverages = {};
+  let totalWeighted = 0;
+  let totalCoef = 0;
+  const newUEAverages = {};
 
-    subjects.forEach((m) => {
-      const td = parseFloat(m.td || 0);
-      const tp = parseFloat(m.tp || 0);
-      const exam = parseFloat(m.exam || 0);
-      let continuousNote = 0;
-      let moy = 0;
+  subjects.forEach((m) => {
+    const td = parseFloat(m.td || 0);
+    const tp = parseFloat(m.tp || 0);
+    const exam = parseFloat(m.exam || 0);
+    let continuousNote = 0;
+    let moy = 0;
 
-      if (!m.hasTD && !m.hasTP) {
-        moy = exam;
-      } else if (m.hasTD && m.hasTP) {
-        continuousNote = (td + tp) / 2;
-        moy = continuousNote * 0.4 + exam * 0.6;
-      } else if (m.hasTD && !m.hasTP) {
-        continuousNote = td;
-        moy = continuousNote * 0.4 + exam * 0.6;
-      } else if (!m.hasTD && m.hasTP) {
-        continuousNote = tp;
-        moy = continuousNote * 0.4 + exam * 0.6;
-      }
+    if (!m.hasTD && !m.hasTP) {
+      moy = exam;
+    } else if (m.hasTD && m.hasTP) {
+      continuousNote = (td + tp) / 2;
+      moy = continuousNote * 0.4 + exam * 0.6;
+    } else if (m.hasTD && !m.hasTP) {
+      continuousNote = td;
+      moy = continuousNote * 0.4 + exam * 0.6;
+    } else if (!m.hasTD && m.hasTP) {
+      continuousNote = tp;
+      moy = continuousNote * 0.4 + exam * 0.6;
+    }
 
-      m.moy = moy.toFixed(2);
-      totalWeighted += moy * m.coef;
-      totalCoef += m.coef;
+    m.moy = moy.toFixed(2);
+    totalWeighted += moy * m.coef;
+    totalCoef += m.coef;
+  });
+
+  const groupedByUE = [
+    { title: "UE Fondamentale (UEF1)", range: [0, 3] },
+    { title: "UE Méthodologique (UEM1)", range: [3, 5] },
+    { title: "UE Découverte (UED1)", range: [5, 6] },
+    { title: "UE Transversale (UET1)", range: [6, 7] },
+  ];
+
+  groupedByUE.forEach((ue) => {
+    const ueData = subjects.slice(ue.range[0], ue.range[1]);
+    let ueTotal = 0;
+    let ueCoefSum = 0;
+    ueData.forEach((m) => {
+      ueTotal += parseFloat(m.moy) * m.coef;
+      ueCoefSum += m.coef;
     });
+    newUEAverages[ue.title] = ueCoefSum > 0 ? (ueTotal / ueCoefSum).toFixed(2) : "0.00";
+  });
 
-    const groupedByUE = [
-      { title: "UE Fondamentale (UEF1)", range: [0, 3] },
-      { title: "UE Méthodologique (UEM1)", range: [3, 5] },
-      { title: "UE Découverte (UED1)", range: [5, 6] },
-      { title: "UE Transversale (UET1)", range: [6, 7] },
-    ];
-
-    groupedByUE.forEach((ue) => {
-      const ueData = subjects.slice(ue.range[0], ue.range[1]);
-      let ueTotal = 0;
-      let ueCoefSum = 0;
-      ueData.forEach((m) => {
-        ueTotal += parseFloat(m.moy) * m.coef;
-        ueCoefSum += m.coef;
-      });
-      newUEAverages[ue.title] = (ueTotal / ueCoefSum).toFixed(2);
-    });
-
-    setUeAverages(newUEAverages);
-    const moyenneGenerale = totalWeighted / totalCoef;
-    setAverage(moyenneGenerale.toFixed(2));
-    AsyncStorage.setItem("S1_AVERAGE", moyenneGenerale.toFixed(2));
-  };
+  setUeAverages(newUEAverages);
+  
+  // FIX: Safe calculation to avoid division by zero
+  const moyenneGenerale = totalCoef > 0 ? totalWeighted / totalCoef : 0;
+  const averageValue = moyenneGenerale.toFixed(2);
+  
+  setAverage(averageValue);
+  AsyncStorage.setItem("AI1_S1_AVERAGE", averageValue);
+};
 
   useEffect(() => {
     calcAverages();

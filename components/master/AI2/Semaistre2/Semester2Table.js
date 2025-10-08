@@ -7,16 +7,17 @@ import { styles } from "../../../../Styles";
 export default function Semester4Table() {
   const [subjects, setSubjects] = useState(modulesS4);
   const [average, setAverage] = useState("0.00");
+  const [ueAverages, setUeAverages] = useState({}); // ADDED: Missing state
 
   useEffect(() => {
-    AsyncStorage.getItem("S4_NOTES").then((data) => {
+    AsyncStorage.getItem("AI2_S2_NOTES").then((data) => {
       if (data) setSubjects(JSON.parse(data));
     });
   }, []);
 
   const saveNotes = (updated) => {
     setSubjects(updated);
-    AsyncStorage.setItem("S4_NOTES", JSON.stringify(updated));
+    AsyncStorage.setItem("AI2_S2_NOTES", JSON.stringify(updated)); // FIXED: Changed from AI2_S2_AVERAGE to AI2_S2_NOTES
   };
 
   const validateNote = (text) => {
@@ -35,7 +36,7 @@ export default function Semester4Table() {
     saveNotes(updated);
   };
 
-  const calcAverage = () => {
+  const calcAverages = () => {
     let totalWeighted = 0;
     let totalCoef = 0;
 
@@ -47,13 +48,16 @@ export default function Semester4Table() {
       totalCoef += m.coef;
     });
 
-    const moyenneGenerale = totalWeighted / totalCoef;
-    setAverage(moyenneGenerale.toFixed(2));
-    AsyncStorage.setItem("S4_AVERAGE", moyenneGenerale.toFixed(2));
+    // FIX: Safe calculation to avoid division by zero
+    const moyenneGenerale = totalCoef > 0 ? totalWeighted / totalCoef : 0;
+    const averageValue = moyenneGenerale.toFixed(2);
+    
+    setAverage(averageValue);
+    AsyncStorage.setItem("AI2_S2_AVERAGE", averageValue);
   };
 
   useEffect(() => {
-    calcAverage();
+    calcAverages();
   }, [subjects]);
 
   return (

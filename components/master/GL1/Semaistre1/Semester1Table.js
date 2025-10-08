@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, ScrollView, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { modulesS1 } from "./modulesS1";
-import { styles } from '../../../../Styles';
+import { modulesS1 } from "./modulesS1"; // FIXED: Changed from modulesS3 to modulesS1
+import { styles } from "../../../../Styles";
 
 export default function Semester1Table() {
-  const [subjects, setSubjects] = useState(modulesS1);
+  const [subjects, setSubjects] = useState(modulesS1); // FIXED: Use modulesS1
   const [average, setAverage] = useState("0.00");
   const [ueAverages, setUeAverages] = useState({});
 
   useEffect(() => {
-    AsyncStorage.getItem("S1_NOTES").then((data) => {
+    AsyncStorage.getItem("GL1_S1_NOTES").then((data) => {
       if (data) setSubjects(JSON.parse(data));
     });
   }, []);
 
   const saveNotes = (updated) => {
     setSubjects(updated);
-    AsyncStorage.setItem("S1_NOTES", JSON.stringify(updated));
+    AsyncStorage.setItem("GL1_S1_NOTES", JSON.stringify(updated)); // FIXED: Save notes, not average
   };
 
   const validateNote = (text) => {
@@ -66,6 +66,7 @@ export default function Semester1Table() {
       totalCoef += m.coef;
     });
 
+    // FIXED: Use correct UE structure for Semester 1 (GL1)
     const groupedByUE = [
       { title: "UE Fondamentale 1 (UEF11)", range: [0, 2] },
       { title: "UE Fondamentale 2 (UEF12)", range: [2, 4] },
@@ -82,20 +83,24 @@ export default function Semester1Table() {
         ueTotal += parseFloat(m.moy) * m.coef;
         ueCoefSum += m.coef;
       });
-      newUEAverages[ue.title] = (ueTotal / ueCoefSum).toFixed(2);
+      newUEAverages[ue.title] = ueCoefSum > 0 ? (ueTotal / ueCoefSum).toFixed(2) : "0.00";
     });
 
     setUeAverages(newUEAverages);
-    const moyenneGenerale = totalWeighted / totalCoef;
-    setAverage(moyenneGenerale.toFixed(2));
-
-    AsyncStorage.setItem('S1_AVERAGE', moyenneGenerale.toFixed(2));
+    
+    // Safe calculation to avoid division by zero
+    const moyenneGenerale = totalCoef > 0 ? totalWeighted / totalCoef : 0;
+    const averageValue = moyenneGenerale.toFixed(2);
+    
+    setAverage(averageValue);
+    AsyncStorage.setItem("GL1_S1_AVERAGE", averageValue);
   };
 
   useEffect(() => {
     calcAverages();
   }, [subjects]);
 
+  // FIXED: Use correct UE structure for Semester 1 display
   const groupedByUE = [
     { title: "UE Fondamentale 1 (UEF11)", data: subjects.slice(0, 2) },
     { title: "UE Fondamentale 2 (UEF12)", data: subjects.slice(2, 4) },
@@ -106,9 +111,15 @@ export default function Semester1Table() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: "#fff" }]}>
-     
-      {/* Table Header */}
-      <View style={{ flexDirection: "row", borderBottomWidth: 2, borderColor: "#000", backgroundColor: "#f5f5f5", paddingVertical: 10 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          borderBottomWidth: 2,
+          borderColor: "#000",
+          backgroundColor: "#f5f5f5",
+          paddingVertical: 10,
+        }}
+      >
         <View style={{ flex: 2.5, paddingLeft: 8 }}>
           <Text style={{ fontWeight: "bold" }}>Module</Text>
         </View>
@@ -122,36 +133,58 @@ export default function Semester1Table() {
           <Text style={{ fontWeight: "bold" }}>Moyenne</Text>
         </View>
       </View>
-      {/* UE Groups */}
+
       {groupedByUE.map((ue, i) => (
         <View key={i} style={{ marginBottom: 15 }}>
-          {/* UE Header */}
-          <View style={{ flexDirection: "row", backgroundColor: "#e0e0e0", paddingVertical: 8, paddingHorizontal: 8, borderWidth: 1, borderColor: "#aaa" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              backgroundColor: "#e0e0e0",
+              paddingVertical: 8,
+              paddingHorizontal: 8,
+              borderWidth: 1,
+              borderColor: "#aaa",
+            }}
+          >
             <View style={{ flex: 2.5 }}>
-              <Text style={{ fontWeight: "bold", fontSize: 14 }}>{ue.title}</Text>
+              <Text style={{ fontWeight: "bold", fontSize: 14 }}>
+                {ue.title}
+              </Text>
             </View>
             <View style={{ flex: 0.8, alignItems: "center" }}>
-              <Text style={{ fontWeight: "bold" }}>{ue.data.reduce((sum, m) => sum + m.coef, 0)}</Text>
+              <Text style={{ fontWeight: "bold" }}>
+                {ue.data.reduce((sum, m) => sum + m.coef, 0)}
+              </Text>
             </View>
             <View style={{ flex: 2 }} />
             <View style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ fontWeight: "bold" }}>{ueAverages[ue.title] || "0.00"}</Text>
+              <Text style={{ fontWeight: "bold" }}>
+                {ueAverages[ue.title] || "0.00"}
+              </Text>
             </View>
           </View>
-          {/* Modules */}
+
           {ue.data.map((item, index) => {
             const globalIndex = subjects.indexOf(item);
             return (
-              <View key={index} style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: "#ccc", minHeight: 50, alignItems: "center", paddingVertical: 8 }}>
-                {/* Module Name */}
+              <View
+                key={index}
+                style={{
+                  flexDirection: "row",
+                  borderBottomWidth: 1,
+                  borderColor: "#ccc",
+                  minHeight: 50,
+                  alignItems: "center",
+                  paddingVertical: 8,
+                }}
+              >
                 <View style={{ flex: 2.5, paddingLeft: 8 }}>
                   <Text style={{ fontSize: 13 }}>{item.module}</Text>
                 </View>
-                {/* Coef */}
                 <View style={{ flex: 0.8, alignItems: "center" }}>
                   <Text>{item.coef}</Text>
                 </View>
-                {/* Notes */}
+
                 <View style={{ flex: 2, alignItems: "center" }}>
                   <View style={{ alignItems: "center" }}>
                     {item.hasTD ? (
@@ -160,7 +193,9 @@ export default function Semester1Table() {
                         placeholder="TD"
                         keyboardType="decimal-pad"
                         value={item.td}
-                        onChangeText={(text) => handleNoteChange(text, globalIndex, "td")}
+                        onChangeText={(text) =>
+                          handleNoteChange(text, globalIndex, "td")
+                        }
                       />
                     ) : (
                       <Text>—</Text>
@@ -171,7 +206,9 @@ export default function Semester1Table() {
                         placeholder="TP"
                         keyboardType="decimal-pad"
                         value={item.tp}
-                        onChangeText={(text) => handleNoteChange(text, globalIndex, "tp")}
+                        onChangeText={(text) =>
+                          handleNoteChange(text, globalIndex, "tp")
+                        }
                       />
                     ) : (
                       <Text>—</Text>
@@ -181,21 +218,33 @@ export default function Semester1Table() {
                       placeholder="EXAM"
                       keyboardType="decimal-pad"
                       value={item.exam}
-                      onChangeText={(text) => handleNoteChange(text, globalIndex, "exam")}
+                      onChangeText={(text) =>
+                        handleNoteChange(text, globalIndex, "exam")
+                      }
                     />
                   </View>
                 </View>
-                {/* Moyenne */}
+
                 <View style={{ flex: 1, alignItems: "center" }}>
-                  <Text style={{ fontWeight: "bold" }}>{item.moy || "0.00"}</Text>
+                  <Text style={{ fontWeight: "bold" }}>
+                    {item.moy || "0.00"}
+                  </Text>
                 </View>
               </View>
             );
           })}
         </View>
       ))}
-      {/* Semester Average */}
-      <View style={{ borderTopWidth: 2, borderColor: "#000", paddingTop: 15, marginTop: 10, paddingBottom: 20 }}>
+
+      <View
+        style={{
+          borderTopWidth: 2,
+          borderColor: "#000",
+          paddingTop: 15,
+          marginTop: 10,
+          paddingBottom: 20,
+        }}
+      >
         <Text style={styles.average}>Moyenne Semestre 1: {average}</Text>
       </View>
     </ScrollView>

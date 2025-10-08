@@ -43,7 +43,8 @@ export default function MainScreen() {
   useEffect(() => {
     let interval;
     if (selectedSpecialty) {
-      interval = setInterval(() => loadAverages(), 2000);
+      loadAverages();
+      interval = setInterval(() => loadAverages(), 1000);
     }
     return () => clearInterval(interval);
   }, [selectedSpecialty]);
@@ -52,8 +53,11 @@ export default function MainScreen() {
     try {
       const s1Avg = await AsyncStorage.getItem(`${selectedSpecialty}_S1_AVERAGE`);
       const s2Avg = await AsyncStorage.getItem(`${selectedSpecialty}_S2_AVERAGE`);
-      if (s1Avg) setSemesterAverages(prev => ({ ...prev, s1: s1Avg }));
-      if (s2Avg) setSemesterAverages(prev => ({ ...prev, s2: s2Avg }));
+      
+      setSemesterAverages({ 
+        s1: s1Avg || "0.00",
+        s2: s2Avg || "0.00"
+      });
     } catch (error) {
       console.error('Error loading averages:', error);
     }
@@ -68,6 +72,7 @@ export default function MainScreen() {
   const handleBack = () => {
     setSelectedSpecialty(null);
     setShowAbout(false);
+    setSemesterAverages({ s1: "0.00", s2: "0.00" });
   };
 
   const handleAbout = () => {
@@ -109,35 +114,41 @@ export default function MainScreen() {
   }
 
   // --- MASTERS ---
-  const renderMaster = (title, Sem1, Sem2) => (
-    <View style={styles.container}>
-      <View style={styles.fixedHeader}>
-        <TouchableOpacity style={styles.backArrow} onPress={handleBack}>
-          <Text style={styles.backArrowText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.specialtyTitle}>{title}</Text>
+  const renderMaster = (title, Sem1, Sem2, specialty) => {
+    console.log("Loading specialty:", specialty);
+    return (
+      <View style={styles.container}>
+        <View style={styles.fixedHeader}>
+          <TouchableOpacity style={styles.backArrow} onPress={handleBack}>
+            <Text style={styles.backArrowText}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.specialtyTitle}>{title}</Text>
+        </View>
+
+        <ScrollView style={styles.scrollContent}>
+          <View style={styles.semesterSection}>
+            <Text style={styles.semesterTitle}>Semestre 1</Text>
+            <Sem1 />
+          </View>
+          <View style={styles.semesterSection}>
+            <Text style={styles.semesterTitle}>Semestre 2</Text>
+            <Sem2 />
+          </View>
+
+          <SummaryTable 
+            semester1Average={semesterAverages.s1} 
+            semester2Average={semesterAverages.s2} 
+          />
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
       </View>
+    );
+  };
 
-      <ScrollView style={styles.scrollContent}>
-        <View style={styles.semesterSection}>
-          <Text style={styles.semesterTitle}>Semestre 1</Text>
-          <Sem1 />
-        </View>
-        <View style={styles.semesterSection}>
-          <Text style={styles.semesterTitle}>Semestre 2</Text>
-          <Sem2 />
-        </View>
-
-        <SummaryTable semester1Average={semesterAverages.s1} semester2Average={semesterAverages.s2} />
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-    </View>
-  );
-
-  if (selectedSpecialty === 'GL1') return renderMaster("Master 1 Génie Logiciel", Semester1Table, Semester2Table);
-  if (selectedSpecialty === 'AI1') return renderMaster("Master 1 Intelligence Artificielle", Semester1TableAI, Semester2TableAI);
-  if (selectedSpecialty === 'GL2') return renderMaster("Master 2 Génie Logiciel", Semester3Table, Semester4Table);
-  if (selectedSpecialty === 'AI2') return renderMaster("Master 2 Intelligence Artificielle", Semester3TableAI, Semester4TableAI);
+  if (selectedSpecialty === 'GL1') return renderMaster("Master 1 Génie Logiciel", Semester1Table, Semester2Table, 'GL1');
+  if (selectedSpecialty === 'AI1') return renderMaster("Master 1 Intelligence Artificielle", Semester1TableAI, Semester2TableAI, 'AI1');
+  if (selectedSpecialty === 'GL2') return renderMaster("Master 2 Génie Logiciel", Semester3Table, Semester4Table, 'GL2');
+  if (selectedSpecialty === 'AI2') return renderMaster("Master 2 Intelligence Artificielle", Semester3TableAI, Semester4TableAI, 'AI2');
 
   // --- MAIN MENU ---
   return (
@@ -174,14 +185,11 @@ export default function MainScreen() {
   );
 }
 
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f8ff',
   },
-  
   fixedHeader: {
     backgroundColor: '#1e3a8a',
     paddingVertical: 25,
@@ -199,7 +207,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backArrow: {
-  
     paddingTop: 20,
     marginRight: 10,
   },
@@ -208,15 +215,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  // Scrollable content area
   scrollContent: {
     flex: 1,
   },
-  scrollContentContainer: {
-    paddingBottom: 40, 
-    paddingTop: 20,
-  },
-  // Original header for main menu
   header: {
     backgroundColor: '#1e3a8a',
     paddingVertical: 35,
@@ -377,7 +378,6 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 50, 
-    
   },
   developersSection: {
     backgroundColor: '#ffffff',
