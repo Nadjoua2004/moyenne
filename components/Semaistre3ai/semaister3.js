@@ -1,25 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, ScrollView, Alert } from "react-native";
+import { View, Text, TextInput, ScrollView } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { modulesS2 } from "./modulesS2";
+import { modulesS3 } from "./moduleS3";
 import { styles } from '../../Styles';
 
-
-
-export default function Semester2Table() {
-  const [subjects, setSubjects] = useState(modulesS2);
+export default function Semester3Table({ specialty = "AI" }) {
+  const [subjects, setSubjects] = useState(modulesS3 || []);
   const [average, setAverage] = useState("0.00");
   const [ueAverages, setUeAverages] = useState({});
+  const [invalidInputs, setInvalidInputs] = useState({});
 
   useEffect(() => {
-    AsyncStorage.getItem("S2_NOTES").then((data) => {
-      if (data) setSubjects(JSON.parse(data));
+    AsyncStorage.getItem(`${specialty}_S3_NOTES`).then((data) => {
+      if (data) {
+        try {
+          const parsedData = JSON.parse(data);
+          setSubjects(parsedData || []);
+        } catch (error) {
+          console.error("Error parsing stored notes:", error);
+          setSubjects(modulesS3 || []);
+        }
+      }
     });
-  }, []);
+  }, [specialty]);
 
   const saveNotes = (updated) => {
     setSubjects(updated);
-    AsyncStorage.setItem("S2_NOTES", JSON.stringify(updated));
+    AsyncStorage.setItem(`${specialty}_S3_NOTES`, JSON.stringify(updated));
   };
 
   const validateNote = (text) => {
@@ -29,94 +36,97 @@ export default function Semester2Table() {
   };
 
   const handleNoteChange = (text, index, field) => {
-    if (!validateNote(text)) {
-      Alert.alert("⚠️ Invalid Note", "Note must be between 0.00 and 20.00");
+    const isValid = validateNote(text);
+    setInvalidInputs(prev => ({ ...prev, [`${index}-${field}`]: !isValid }));
+
+    if (!isValid && text !== "") {
       return;
     }
+
+    if (index < 0 || index >= subjects.length) {
+      console.error("Invalid index:", index);
+      return;
+    }
+
     const updated = [...subjects];
     updated[index][field] = text;
     saveNotes(updated);
   };
 
   const calcAverages = () => {
+    if (!subjects || subjects.length === 0) {
+      setAverage("0.00");
+      setUeAverages({});
+      return;
+    }
     let totalWeighted = 0;
     let totalCoef = 0;
     const newUEAverages = {};
-
-    // 🧮 Calculate each module average with 40% continuous / 60% exam
     subjects.forEach((m) => {
       const td = parseFloat(m.td || 0);
       const tp = parseFloat(m.tp || 0);
       const exam = parseFloat(m.exam || 0);
       let continuousNote = 0;
       let moy = 0;
-
-      // Calculate continuous assessment (40%)
       if (!m.hasTD && !m.hasTP) {
-        // No TD/TP - only exam (like UE Découverte)
         moy = exam;
       } else if (m.hasTD && m.hasTP) {
-        // Has both TD and TP - average them for continuous part
         continuousNote = (td + tp) / 2;
-        moy = (continuousNote * 0.4) + (exam * 0.6);
+        moy = continuousNote * 0.4 + exam * 0.6;
       } else if (m.hasTD && !m.hasTP) {
-        // Only TD (like Systèmes d'Information Coopératifs)
         continuousNote = td;
-        moy = (continuousNote * 0.4) + (exam * 0.6);
+        moy = continuousNote * 0.4 + exam * 0.6;
       } else if (!m.hasTD && m.hasTP) {
-        // Only TP (like Systèmes Multi Agents)
         continuousNote = tp;
-        moy = (continuousNote * 0.4) + (exam * 0.6);
+        moy = continuousNote * 0.4 + exam * 0.6;
       }
-
       m.moy = moy.toFixed(2);
       totalWeighted += moy * m.coef;
       totalCoef += m.coef;
     });
-
-    // 🧩 Group modules by UE for Semester 2
     const groupedByUE = [
-      { title: "UE Fondamentale 1 (UEF21)", range: [0, 2] },
-      { title: "UE Fondamentale 2 (UEF22)", range: [2, 4] },
-      { title: "UE Méthodologique (UEM2)", range: [4, 6] },
-      { title: "UE Transversale (UET2)", range: [6, 7] },
-      { title: "UE Découverte (UED2)", range: [7, 8] },
+      { title: "UE Fondamentale (UEF3)", range: [0, 4] },
+      { title: "UE Méthodologique (UEM3)", range: [4, 6] },
+      { title: "UE Découverte (UED3)", range: [6, 7] },
+      { title: "UE Transversale (UET3)", range: [7, 8] },
     ];
-
     groupedByUE.forEach((ue) => {
       const ueData = subjects.slice(ue.range[0], ue.range[1]);
       let ueTotal = 0;
       let ueCoefSum = 0;
       ueData.forEach((m) => {
-        ueTotal += parseFloat(m.moy) * m.coef;
+        ueTotal += parseFloat(m.moy || 0) * m.coef;
         ueCoefSum += m.coef;
       });
-      newUEAverages[ue.title] = (ueTotal / ueCoefSum).toFixed(2);
+      newUEAverages[ue.title] = ueCoefSum > 0 ? (ueTotal / ueCoefSum).toFixed(2) : "0.00";
     });
-
     setUeAverages(newUEAverages);
-    const moyenneGenerale = totalWeighted / totalCoef;
+    const moyenneGenerale = totalCoef > 0 ? totalWeighted / totalCoef : 0;
     setAverage(moyenneGenerale.toFixed(2));
-    
-    // Save the average to AsyncStorage
-    AsyncStorage.setItem('S2_AVERAGE', moyenneGenerale.toFixed(2));
+    AsyncStorage.setItem(`${specialty}_S3_AVERAGE`, moyenneGenerale.toFixed(2));
   };
 
-  useEffect(calcAverages, [subjects]);
+  useEffect(() => {
+    calcAverages();
+  }, [subjects]);
 
   const groupedByUE = [
-    { title: "UE Fondamentale 1 (UEF21)", data: subjects.slice(0, 2) },
-    { title: "UE Fondamentale 2 (UEF22)", data: subjects.slice(2, 4) },
-    { title: "UE Méthodologique (UEM2)", data: subjects.slice(4, 6) },
-    { title: "UE Transversale (UET2)", data: subjects.slice(6, 7) },
-    { title: "UE Découverte (UED2)", data: subjects.slice(7, 8) },
+    { title: "UE Fondamentale (UEF3)", data: (subjects || []).slice(0, 4) },
+    { title: "UE Méthodologique (UEM3)", data: (subjects || []).slice(4, 6) },
+    { title: "UE Découverte (UED3)", data: (subjects || []).slice(6, 7) },
+    { title: "UE Transversale (UET3)", data: (subjects || []).slice(7, 8) },
   ];
+
+  const findSubjectIndex = (item) => {
+    if (!subjects || !item) return -1;
+    return subjects.findIndex(subject =>
+      subject.module === item.module &&
+      subject.coef === item.coef
+    );
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: "#fff" }]}>
-    
-
-      {/* Table Header */}
       <View
         style={{
           flexDirection: "row",
@@ -139,11 +149,8 @@ export default function Semester2Table() {
           <Text style={{ fontWeight: "bold" }}>Moyenne</Text>
         </View>
       </View>
-
-      {/* UE Groups */}
       {groupedByUE.map((ue, i) => (
         <View key={i} style={{ marginBottom: 15 }}>
-          {/* UE Header */}
           <View
             style={{
               flexDirection: "row",
@@ -161,7 +168,7 @@ export default function Semester2Table() {
             </View>
             <View style={{ flex: 0.8, alignItems: "center" }}>
               <Text style={{ fontWeight: "bold" }}>
-                {ue.data.reduce((sum, m) => sum + m.coef, 0)}
+                {ue.data.reduce((sum, m) => sum + (m.coef || 0), 0)}
               </Text>
             </View>
             <View style={{ flex: 2 }} />
@@ -171,10 +178,8 @@ export default function Semester2Table() {
               </Text>
             </View>
           </View>
-
-          {/* Modules */}
           {ue.data.map((item, index) => {
-            const globalIndex = subjects.indexOf(item);
+            const globalIndex = findSubjectIndex(item);
 
             return (
               <View
@@ -188,22 +193,20 @@ export default function Semester2Table() {
                   paddingVertical: 8,
                 }}
               >
-                {/* Module Name */}
                 <View style={{ flex: 2.5, paddingLeft: 8 }}>
                   <Text style={{ fontSize: 13 }}>{item.module}</Text>
                 </View>
-
-                {/* Coef */}
                 <View style={{ flex: 0.8, alignItems: "center" }}>
                   <Text>{item.coef}</Text>
                 </View>
-
-                {/* Notes — all in one column */}
                 <View style={{ flex: 2, alignItems: "center" }}>
                   <View style={{ alignItems: "center" }}>
                     {item.hasTD ? (
                       <TextInput
-                        style={styles.noteInput}
+                        style={[
+                          styles.noteInput,
+                          invalidInputs[`${globalIndex}-td`] && { borderColor: 'red', borderWidth: 1 }
+                        ]}
                         placeholder="TD"
                         keyboardType="decimal-pad"
                         value={item.td}
@@ -214,10 +217,12 @@ export default function Semester2Table() {
                     ) : (
                       <Text>—</Text>
                     )}
-
                     {item.hasTP ? (
                       <TextInput
-                        style={styles.noteInput}
+                        style={[
+                          styles.noteInput,
+                          invalidInputs[`${globalIndex}-tp`] && { borderColor: 'red', borderWidth: 1 }
+                        ]}
                         placeholder="TP"
                         keyboardType="decimal-pad"
                         value={item.tp}
@@ -228,9 +233,11 @@ export default function Semester2Table() {
                     ) : (
                       <Text>—</Text>
                     )}
-
                     <TextInput
-                      style={styles.noteInput}
+                      style={[
+                        styles.noteInput,
+                        invalidInputs[`${globalIndex}-exam`] && { borderColor: 'red', borderWidth: 1 }
+                      ]}
                       placeholder="EXAM"
                       keyboardType="decimal-pad"
                       value={item.exam}
@@ -240,8 +247,6 @@ export default function Semester2Table() {
                     />
                   </View>
                 </View>
-
-                {/* Moyenne */}
                 <View style={{ flex: 1, alignItems: "center" }}>
                   <Text style={{ fontWeight: "bold" }}>
                     {item.moy || "0.00"}
@@ -252,8 +257,6 @@ export default function Semester2Table() {
           })}
         </View>
       ))}
-
-      {/* Semester Average */}
       <View
         style={{
           borderTopWidth: 2,
@@ -263,7 +266,14 @@ export default function Semester2Table() {
           paddingBottom: 20,
         }}
       >
-        <Text style={styles.average}>Moyenne Semestre 2: {average}</Text>
+        <Text
+          style={[
+            styles.average,
+            { color: average >= 10 ? "green" : "red" }
+          ]}
+        >
+          Moyenne Semestre 3: {average}
+        </Text>
       </View>
     </ScrollView>
   );

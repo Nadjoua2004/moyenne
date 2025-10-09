@@ -1,15 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function SummaryTable({ semester1Average, semester2Average }) {
-  // Calculate annual average
-  const annualAverage = ((parseFloat(semester1Average) + parseFloat(semester2Average)) / 2).toFixed(2);
+export default function SummaryTable({ 
+  semester1Average, 
+  semester2Average, 
+  semester3Average = "0.00", 
+  semester4Average = "0.00",
+  masterLevel = 1
+}) {
+  const [annualAverage, setAnnualAverage] = useState("0.00");
+
+  useEffect(() => {
+    // Recalculate when any average changes
+    let average;
+    
+    if (masterLevel === 1) {
+      // Master 1: Only show S1 and S2
+      const total = parseFloat(semester1Average || 0) + parseFloat(semester2Average || 0);
+      average = (total / 2).toFixed(2);
+    } else {
+      // Master 2: Only show S3 and S4
+      const total = parseFloat(semester3Average || 0) + parseFloat(semester4Average || 0);
+      average = (total / 2).toFixed(2);
+    }
+    
+    setAnnualAverage(average);
+  }, [semester1Average, semester2Average, semester3Average, semester4Average, masterLevel]);
+
+  // Calculate which semesters to show based on master level
+  let showSemesters = [];
+  if (masterLevel === 1) {
+    showSemesters = [1, 2];
+  } else {
+    showSemesters = [3, 4];
+  }
 
   return (
     <View style={styles.container}>
-   
+      <Text style={styles.header}>Résumé Académique</Text>
       
-      {/* Table Header */}
       <View style={styles.tableHeader}>
         <View style={styles.headerCell}>
           <Text style={styles.headerText}>Semestre/Année</Text>
@@ -19,28 +48,56 @@ export default function SummaryTable({ semester1Average, semester2Average }) {
         </View>
       </View>
 
-      {/* Table Rows */}
-      <View style={styles.tableRow}>
-        <View style={styles.cell}>
-          <Text style={styles.cellText}>Semestre 1</Text>
+      {/* Conditionally render semesters based on master level */}
+      {showSemesters.includes(1) && (
+        <View style={styles.tableRow}>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>Semestre 1</Text>
+          </View>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>{semester1Average}</Text>
+          </View>
         </View>
-        <View style={styles.cell}>
-          <Text style={styles.cellText}>{semester1Average}</Text>
-        </View>
-      </View>
+      )}
 
-      <View style={styles.tableRow}>
-        <View style={styles.cell}>
-          <Text style={styles.cellText}>Semestre 2</Text>
+      {showSemesters.includes(2) && (
+        <View style={styles.tableRow}>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>Semestre 2</Text>
+          </View>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>{semester2Average}</Text>
+          </View>
         </View>
-        <View style={styles.cell}>
-          <Text style={styles.cellText}>{semester2Average}</Text>
+      )}
+
+      {showSemesters.includes(3) && (
+        <View style={styles.tableRow}>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>Semestre 3</Text>
+          </View>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>{semester3Average}</Text>
+          </View>
         </View>
-      </View>
+      )}
+
+      {showSemesters.includes(4) && (
+        <View style={styles.tableRow}>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>Semestre 4</Text>
+          </View>
+          <View style={styles.cell}>
+            <Text style={styles.cellText}>{semester4Average}</Text>
+          </View>
+        </View>
+      )}
 
       <View style={[styles.tableRow, styles.annualRow]}>
         <View style={styles.cell}>
-          <Text style={[styles.cellText, styles.annualText]}>Année</Text>
+          <Text style={[styles.cellText, styles.annualText]}>
+            {masterLevel === 1 ? 'Moyenne Master 1' : 'Moyenne Master 2'}
+          </Text>
         </View>
         <View style={styles.cell}>
           <Text style={[styles.cellText, styles.annualText]}>{annualAverage}</Text>
@@ -49,6 +106,7 @@ export default function SummaryTable({ semester1Average, semester2Average }) {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

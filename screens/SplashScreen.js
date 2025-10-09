@@ -33,7 +33,7 @@ export default function SplashScreen({ onFinish }) {
       </View>
       
       {/* Text */}
-      <Text style={styles.subtitle}>Université de Boumerdes</Text>
+      <Text style={styles.subtitle}>AVG Calculator</Text>
     </Animated.View>
   );
 }

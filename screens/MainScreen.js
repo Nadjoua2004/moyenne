@@ -1,38 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, BackHandler , Linking  } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Semester1Table from '../components/Semaistre1/Semester1Table.js';
-import Semester2Table from '../components/Semaistre2/semaister2Table.js';
+
+// GL 
+import Semester1GL from '../components/Semaistre1gl/Semester1Table.js';
+import Semester2GL from '../components/Semaistre2gl/semaister2Table.js';
+import Semester3GL from '../components/Semaistre3gl/Semester3Table.js';
+import Semester4GL from '../components/Semaistre4gl/semaister4Table.js';
+
+// AI
+import Semester1AI from '../components/Semaistre1ai/semaister1.js';
+import Semester2AI from '../components/Semaistre2ai/semaister2.js';
+import Semester3AI from '../components/Semaistre3ai/semaister3.js';
+import Semester4AI from '../components/Semaistre4ai/semaister4.js';
+
 import SummaryTable from '../components/summaryTable.js';
 
 export default function MainScreen() {
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
+  const [selectedMaster, setSelectedMaster] = useState(null);
   const [showAbout, setShowAbout] = useState(false);
 
   const [semesterAverages, setSemesterAverages] = useState({
     s1: "0.00",
-    s2: "0.00"
+    s2: "0.00",
+    s3: "0.00", 
+    s4: "0.00"
   });
+
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (selectedSpecialty === 'GL' || showAbout) {
+      if (selectedSpecialty || showAbout) {
         handleBack();
-        return true; // Prevent default behavior (app exit)
+        return true;
       }
-      return false; // Use default behavior (app exit)
+      return false;
     });
-  
     return () => backHandler.remove();
   }, [selectedSpecialty, showAbout]);
-  // Load averages from storage when component mounts
-  useEffect(() => {
-    loadAverages();
-  }, []);
 
-  // Set up interval to refresh averages every 2 seconds when in GL view
+  // Load averages from storage when component mounts or specialty changes
+  useEffect(() => {
+    if (selectedSpecialty) {
+      loadAverages();
+    }
+  }, [selectedSpecialty]);
+
+  // Set up interval to refresh averages every 2 seconds when in specialty view
   useEffect(() => {
     let interval;
-    if (selectedSpecialty === 'GL') {
+    if (selectedSpecialty) {
       interval = setInterval(() => {
         loadAverages();
       }, 2000);
@@ -41,40 +58,78 @@ export default function MainScreen() {
   }, [selectedSpecialty]);
 
   const loadAverages = async () => {
+    if (!selectedSpecialty) return;
+    
     try {
-      const s1Avg = await AsyncStorage.getItem('S1_AVERAGE');
-      const s2Avg = await AsyncStorage.getItem('S2_AVERAGE');
+      const s1Avg = await AsyncStorage.getItem(`${selectedSpecialty}_S1_AVERAGE`);
+      const s2Avg = await AsyncStorage.getItem(`${selectedSpecialty}_S2_AVERAGE`);
+      const s3Avg = await AsyncStorage.getItem(`${selectedSpecialty}_S3_AVERAGE`);
+      const s4Avg = await AsyncStorage.getItem(`${selectedSpecialty}_S4_AVERAGE`);
       
-      if (s1Avg) setSemesterAverages(prev => ({ ...prev, s1: s1Avg }));
-      if (s2Avg) setSemesterAverages(prev => ({ ...prev, s2: s2Avg }));
+      setSemesterAverages({
+        s1: s1Avg || "0.00",
+        s2: s2Avg || "0.00", 
+        s3: s3Avg || "0.00",
+        s4: s4Avg || "0.00"
+      });
     } catch (error) {
       console.error('Error loading averages:', error);
     }
   };
 
-  const handleSpecialtySelect = (specialty) => {
+  const handleSpecialtySelect = (master, specialty) => {
+    setSelectedMaster(master);
     setSelectedSpecialty(specialty);
     setShowAbout(false);
-    // Load averages immediately when switching to GL
-    if (specialty === 'GL') {
-      loadAverages();
-    }
   };
 
   const handleBack = () => {
     setSelectedSpecialty(null);
+    setSelectedMaster(null);
     setShowAbout(false);
   };
 
   const handleAbout = () => {
     setShowAbout(true);
     setSelectedSpecialty(null);
+    setSelectedMaster(null);
+  };
+
+  const renderSpecialtyContent = (masterLevel, specialtyName, semesters) => {
+    return (
+      <View style={styles.container}>
+        <View style={styles.fixedHeader}>
+          <TouchableOpacity style={styles.backArrow} onPress={handleBack}>
+            <Text style={styles.backArrowText}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.specialtyTitle}>Master {masterLevel} - {specialtyName}</Text>
+        </View>
+        
+        <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer}>
+          {semesters.map((semester, index) => (
+            <View key={index} style={styles.semesterSection}>
+              <Text style={styles.semesterTitle}>Semestre {semester.number}</Text>
+              {semester.component}
+            </View>
+          ))}
+
+          <SummaryTable 
+            semester1Average={semesterAverages.s1}
+            semester2Average={semesterAverages.s2}
+            semester3Average={semesterAverages.s3}
+            semester4Average={semesterAverages.s4}
+            masterLevel={masterLevel}
+          />
+          
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </View>
+    );
   };
 
   if (showAbout) {
     return (
       <View style={styles.container}>
-        {/* Fixed Header */}
         <View style={styles.fixedHeader}>
           <TouchableOpacity style={styles.backArrow} onPress={handleBack}>
             <Text style={styles.backArrowText}>←</Text>
@@ -83,10 +138,10 @@ export default function MainScreen() {
         </View>
         
         <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer}>
-          <Text style={styles.aboutTitle}>About </Text>
+          <Text style={styles.aboutTitle}>À Propos</Text>
           <View style={styles.aboutContent}>
             <Text style={styles.aboutText}>
-              Application de calcul des moyennes pour le Master Génie Logiciel
+              Application de calcul des moyennes pour les Masters
               {"\n\n"}
               Université de Boumerdes
               {"\n"}
@@ -99,96 +154,122 @@ export default function MainScreen() {
           </View>
           
           <View style={styles.developersSection}>
-          <Text style={styles.developersTitle}>Développeurs</Text>
-          <View style={styles.developersContent}>
-            <Text style={styles.developersText}>
-              • Nadjoua Sahnoune {"\n"}
-              • Nesrine Tamourtbir
-            </Text>
-          </View>
-        </View>
+  <Text style={styles.developersTitle}>Développeurs</Text>
+  <View style={styles.developersContent}>
+    <Text style={styles.developersText}>
+      •
+      <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/in/nadjoua-sahnoune-855462223?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app')}>
+        <Text style={{ color: '#0077b5' }}> Nadjoua Sahnoune </Text>
+      </TouchableOpacity>
+      {"\n"}
+      •
+      <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/in/nesrine-tamourtbir-2a21b1336/')}>
+        <Text style={{ color: '#0077b5' }}> Nesrine Tamourtbir </Text>
+      </TouchableOpacity>
+    </Text>
+  </View>
+</View>
 
         </ScrollView>
       </View>
     );
   }
 
-  if (selectedSpecialty === 'GL') {
-    return (
-      <View style={styles.container}>
-        {/* Fixed Header */}
-        <View style={styles.fixedHeader}>
-          <TouchableOpacity style={styles.backArrow} onPress={handleBack}>
-            <Text style={styles.backArrowText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.specialtyTitle}>Master Génie Logiciel</Text>
-        </View>
-        
-        {/* Scrollable Content */}
-        <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer}>
-          {/* Semester Tables */}
-          <View style={styles.semesterSection}>
-            <Text style={styles.semesterTitle}>Semestre 1</Text>
-            <Semester1Table />
-          </View>
+  // Master 1 - GL (S1 & S2)
+  if (selectedMaster === 1 && selectedSpecialty === 'GL') {
+    return renderSpecialtyContent(1, 'Génie Logiciel', [
+      { number: 1, component: <Semester1GL specialty="GL" /> },
+      { number: 2, component: <Semester2GL specialty="GL" /> }
+    ]);
+  }
 
-          <View style={styles.semesterSection}>
-            <Text style={styles.semesterTitle}>Semestre 2</Text>
-            <Semester2Table />
-          </View>
+  // Master 1 - AI (S1 AI & S2 AI)
+  if (selectedMaster === 1 && selectedSpecialty === 'AI') {
+    return renderSpecialtyContent(1, 'Intelligence Artificielle', [
+      { number: 1, component: <Semester1AI specialty="AI" /> },
+      { number: 2, component: <Semester2AI specialty="AI" /> }
+    ]);
+  }
 
-          {/* Summary Table - Now at the bottom */}
-          <SummaryTable 
-            semester1Average={semesterAverages.s1}
-            semester2Average={semesterAverages.s2}
-          />
-          
-          {/* Extra space at the bottom */}
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
-      </View>
-    );
+  // Master 2 - GL (S3 & S4)
+  if (selectedMaster === 2 && selectedSpecialty === 'GL') {
+    return renderSpecialtyContent(2, 'Génie Logiciel', [
+      { number: 3, component: <Semester3GL specialty="GL" /> },
+      { number: 4, component: <Semester4GL specialty="GL" /> }
+    ]);
+  }
+
+  // Master 2 - AI (S3 AI & S4 AI)
+  if (selectedMaster === 2 && selectedSpecialty === 'AI') {
+    return renderSpecialtyContent(2, 'Intelligence Artificielle', [
+      { number: 3, component: <Semester3AI specialty="AI" /> },
+      { number: 4, component: <Semester4AI specialty="AI" /> }
+    ]);
   }
 
   // Main Menu
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.departmentTitle}>DÉPARTEMENT D'INFORMATIQUE</Text>
       </View>
 
-      {/* Master Section */}
+      {/* Master 1 Section */}
       <View style={styles.masterSection}>
-        <Text style={styles.masterTitle}>Master Boumerdes</Text>
+        <Text style={styles.masterTitle}>Master 1</Text>
         
         <View style={styles.buttonsContainer}>
           <TouchableOpacity 
             style={[styles.specialtyButton, styles.glButton]}
-            onPress={() => handleSpecialtySelect('GL')}
+            onPress={() => handleSpecialtySelect(1, 'GL')}
           >
             <Text style={styles.specialtyButtonText}>Génie Logiciel (GL)</Text>
+            
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.specialtyButton, styles.aiButton]}
-            onPress={() => handleSpecialtySelect('AI')}
+            onPress={() => handleSpecialtySelect(1, 'AI')}
           >
             <Text style={styles.specialtyButtonText}>Intelligence Artificielle (AI)</Text>
+            
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* About Button */}
+      {/* Master 2 Section */}
+      <View style={styles.masterSection}>
+        <Text style={styles.masterTitle}>Master 2</Text>
+        
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity 
+            style={[styles.specialtyButton, styles.glButton]}
+            onPress={() => handleSpecialtySelect(2, 'GL')}
+          >
+            <Text style={styles.specialtyButtonText}>Génie Logiciel (GL)</Text>
+            
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.specialtyButton, styles.aiButton]}
+            onPress={() => handleSpecialtySelect(2, 'AI')}
+          >
+            <Text style={styles.specialtyButtonText}>Intelligence Artificielle (AI)</Text>
+            
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <TouchableOpacity style={styles.aboutButton} onPress={handleAbout}>
-        <Text style={styles.aboutButtonText}>About</Text>
+        <Text style={styles.aboutButtonText}>À Propos</Text>
       </TouchableOpacity>
       
-      {/* Extra space at the bottom for main menu too */}
       <View style={styles.bottomSpacing} />
     </ScrollView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -213,7 +294,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backArrow: {
-  
     paddingTop: 20,
     marginRight: 10,
   },
@@ -222,7 +302,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  // Scrollable content area
   scrollContent: {
     flex: 1,
   },
@@ -230,7 +309,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40, 
     paddingTop: 20,
   },
-  // Original header for main menu
   header: {
     backgroundColor: '#1e3a8a',
     paddingVertical: 35,
@@ -242,7 +320,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   departmentTitle: {
     fontSize: 18,
@@ -260,9 +338,9 @@ const styles = StyleSheet.create({
   masterSection: {
     backgroundColor: '#ffffff',
     margin: 20,
-    marginTop: 80,
+    marginTop: 25,
     padding: 25,
-    paddingTop: 35,
+    paddingTop: 25,
     borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -277,7 +355,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#1e3a8a',
-    marginBottom: 25,
+    marginBottom: 20,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -293,12 +371,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   buttonsContainer: {
-    gap: 20,
-    paddingBottom: 20,
+    gap: 15,
   },
   specialtyButton: {
     paddingVertical: 16,
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
@@ -324,14 +401,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
+  semesterSubtitle: {
+    color: '#e0f2fe',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   aboutButton: {
     backgroundColor: '#64748b',
     paddingVertical: 14,
     paddingHorizontal: 130,
     borderRadius: 10,
     alignSelf: 'center',
-    marginTop: 78,
-    marginBottom: 30,
+    marginTop: 10,
+    marginBottom: 40,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -390,8 +474,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   bottomSpacing: {
-    height: 50, 
-    
+    height: 50,
   },
   developersSection: {
     backgroundColor: '#ffffff',
@@ -421,5 +504,32 @@ const styles = StyleSheet.create({
     color: '#374151',
     textAlign: 'center',
     letterSpacing: 0.3,
+  },
+  errorContainer: {
+    margin: 15,
+    padding: 20,
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#dc2626',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#dc2626',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  retryButton: {
+    backgroundColor: '#dc2626',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    marginTop: 10,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
 });
