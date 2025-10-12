@@ -29,3 +29,14 @@ React Native (Expo)
 JavaScript
 
 Expo EAS Build
+
+📱 Screenshots
+
+ <img width="1080" height="2400" alt="image" src="https://github.com/user-attachments/assets/45e3a273-50c1-4ec2-a533-b8cab5e03a53" />
+ <img width="1080" height="2400" alt="image" src="https://github.com/user-attachments/assets/35ce18f1-930d-4f08-8923-1b5ff4667c3e" />
+ <img width="1080" height="2400" alt="image" src="https://github.com/user-attachments/assets/bc89d900-2cab-486f-a9b8-ad6b70ee41c0" />
+ 
+
+
+
+
